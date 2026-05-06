@@ -2,143 +2,155 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Focus Timer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Asakatsu Focus</title>
     
-    <!-- 【ここを追加】あなたが選んだトマトのアイコンを設定します -->
-    <!-- このHTMLと同じ場所に 'tomato-icon.jpg' (選んだトマトの画像) を置いてください -->
+    <!-- 【アイコン追加】 -->
     <link rel="icon" href="tomato-icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="tomato-icon.jpg">
 
     <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #F5F5F0; /* ジャパンディな背景色 */
-            color: #4A4A4A;
-        }
-        #timer { font-size: 80px; font-weight: bold; margin: 20px 0; }
-        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-        button {
-            padding: 15px 30px;
-            font-size: 18px;
-            cursor: pointer;
-            border: none;
-            border-radius: 8px;
-            transition: 0.3s;
-        }
-        #startBtn { background-color: #BC6C25; color: white; }
-        #pauseBtn { background-color: #A8A8A8; color: white; }
-        #resetBtn { background-color: #606060; color: white; }
-        select, input { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+        :root { --bg: #1a1a1a; --card: #2d2d2d; --text: #ffffff; --accent: #ff5f5f; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .container { width: 85%; max-width: 400px; background: var(--card); padding: 30px; border-radius: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .timer { font-size: 5.5rem; font-weight: 200; margin: 10px 0; font-variant-numeric: tabular-nums; }
+        .status { color: #888; letter-spacing: 3px; font-size: 0.9rem; text-transform: uppercase; }
+        select, button { width: 100%; padding: 16px; border-radius: 15px; border: none; font-size: 1.1rem; margin-top: 15px; }
+        select { background: #444; color: white; text-align: center; -webkit-appearance: none; }
+        button { background: var(--accent); color: white; font-weight: bold; cursor: pointer; }
+        label { font-size: 0.75rem; color: #666; display: block; text-align: left; margin: 15px 0 -10px 5px; }
     </style>
 </head>
 <body>
 
-    <div id="timer">25:00</div>
-
-    <div class="controls">
+<div class="container">
+    <div id="setup-screen">
+        <h2 style="font-weight: 300;">Focus Timer</h2>
+        <label>ポモドーロ</label>
         <select id="timerMode">
-            <option value="25">集中 (25分)</option>
-            <option value="50">集中 (50分)</option>
-            <option value="5">休憩 (5分)</option>
+            <option value="25">25分 - 5分</option>
+            <option value="50">50分 - 10分</option>
         </select>
-        <input type="text" id="activity" placeholder="何をする？" value="勉強">
+        <label>ログ内容</label>
+        <select id="activity">
+            <option value="勉強">勉強 ✍️</option>
+            <option value="読書">読書 📖</option>
+            <option value="仕事">仕事 💻</option>
+        </select>
+        <button id="startBtn">集中スタート</button>
     </div>
 
-    <div class="controls">
-        <button id="startBtn">START</button>
-        <button id="pauseBtn">PAUSE</button>
-        <button id="resetBtn">RESET</button>
+    <div id="timer-screen" style="display:none;">
+        <div id="status" class="status">FOCUS</div>
+        <div class="timer" id="display">00:00</div>
+        <button id="stopBtn" style="background:#444;">一時停止</button>
     </div>
+</div>
 
-    <!-- オーディオファイル（GitHubのリポジトリに配置してください） -->
-    <audio id="focusAudio" src="rain.mp3" preload="auto"></audio>
+<audio id="focusSound" src="雨が降る2.mp3" preload="auto"></audio>
+<audio id="relaxSound" src="In That Mood.mp3" preload="auto"></audio>
 
-    <script>
-        let timeLeft;
-        let timerId = null;
-        let isPaused = false;
-        const timerDisplay = document.getElementById('timer');
-        const focusAudio = document.getElementById('focusAudio');
+<script>
+    let timer;
+    let timeLeft;
+    let isFocus = true;
+    let isPaused = false;
+    let wakeLock = null;
 
-        // --- 音楽ループ処理 (以前の修正：10秒バッファで「プツッ」を解消) ---
-        focusAudio.addEventListener('timeupdate', function() {
+    const focusAudio = document.getElementById('focusSound');
+    const relaxAudio = document.getElementById('relaxSound');
+    const stopBtn = document.getElementById('stopBtn');
+
+    // --- 1. シームレスループ (10秒前で戻す：途切れ対策強化) ---
+    [focusAudio, relaxAudio].forEach(audio => {
+        audio.addEventListener('timeupdate', function() {
             const buffer = 10.0; 
             if(this.currentTime > this.duration - buffer){
                 this.currentTime = 0;
                 this.play();
             }
         });
+    });
 
-        function updateDisplay() {
-            const mins = Math.floor(timeLeft / 60);
-            const secs = timeLeft % 60;
-            timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    async function requestWakeLock() {
+        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+    }
+
+    function startTimer() {
+        timeLeft = parseInt(document.getElementById('timerMode').value) * 60;
+        isFocus = true; isPaused = false;
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('timer-screen').style.display = 'block';
+        requestWakeLock();
+        runPhase();
+    }
+
+    function runPhase() {
+        if (isFocus) {
+            document.getElementById('status').textContent = "FOCUS";
+            focusAudio.play(); relaxAudio.pause();
+        } else {
+            document.getElementById('status').textContent = "RELAX";
+            relaxAudio.play(); focusAudio.pause();
         }
+        startInterval();
+    }
 
-        function startTimer() {
+    function startInterval() {
+        if(timer) clearInterval(timer);
+        timer = setInterval(() => {
             if (!isPaused) {
-                timeLeft = document.getElementById('timerMode').value * 60;
-            }
-            isPaused = false;
-            
-            if (timerId) clearInterval(timerId);
-            focusAudio.play();
-
-            timerId = setInterval(() => {
                 timeLeft--;
-                updateDisplay();
+                const m = Math.floor(timeLeft / 60);
+                const s = timeLeft % 60;
+                document.getElementById('display').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                
                 if (timeLeft <= 0) {
-                    clearInterval(timerId);
-                    focusAudio.pause();
-                    logToObsidian();
+                    clearInterval(timer);
+                    if (isFocus) {
+                        logToObsidian(); 
+                        isFocus = false;
+                        timeLeft = (document.getElementById('timerMode').value === "25") ? 5 * 60 : 10 * 60;
+                        setTimeout(runPhase, 2000); 
+                    } else { resetApp(); }
                 }
-            }, 1000);
-        }
-
-        function pauseTimer() {
-            if (timerId) {
-                clearInterval(timerId);
-                focusAudio.pause();
-                isPaused = true;
             }
-        }
+        }, 1000);
+    }
 
-        function resetTimer() {
-            clearInterval(timerId);
-            focusAudio.pause();
-            focusAudio.currentTime = 0;
-            isPaused = false;
-            timeLeft = document.getElementById('timerMode').value * 60;
-            updateDisplay();
-        }
+    // --- 2. Thino連携 (空行ブースト) ---
+    function logToObsidian() {
+        const act = document.getElementById('activity').value;
+        const mode = document.getElementById('timerMode').value;
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        // 改行を入れることで、Thinoに確実に「ログ」として認識させます
+        const note = `\n- ${timeStr} 🍅${act} (${mode}分間集中) #log/focus\n`;
+        
+        const uri = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(note)}&mode=append`;
+        window.location.href = uri;
+    }
 
-        // --- Obsidian/Thino連携 (以前の修正：改行ブーストで空のノートでも認識) ---
-        function logToObsidian() {
-            const act = document.getElementById('activity').value;
-            const mode = document.getElementById('timerMode').value;
-            const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            
-            // 2行の改行を入れることで、Thinoにログとして確実に認識させます
-            const note = `\n\n- ${timeStr} 🍅${act} (${mode}分間集中) #log/focus\n`;
-            
-            const uri = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(note)}&mode=append`;
-            window.location.href = uri;
-        }
+    function togglePause() {
+        isPaused = !isPaused;
+        stopBtn.textContent = isPaused ? "再開" : "一時停止";
+        if (isPaused) { focusAudio.pause(); relaxAudio.pause(); }
+        else { if (isFocus) focusAudio.play(); else relaxAudio.play(); }
+    }
 
-        document.getElementById('startBtn').addEventListener('click', startTimer);
-        document.getElementById('pauseBtn').addEventListener('click', pauseTimer);
-        document.getElementById('resetBtn').addEventListener('click', resetTimer);
-        document.getElementById('timerMode').addEventListener('change', resetTimer);
+    function resetApp() {
+        clearInterval(timer);
+        if (wakeLock) wakeLock.release();
+        focusAudio.pause(); relaxAudio.pause();
+        document.getElementById('setup-screen').style.display = 'block';
+        document.getElementById('timer-screen').style.display = 'none';
+    }
 
-        resetTimer();
-    </script>
+    document.getElementById('startBtn').addEventListener('click', startTimer);
+    stopBtn.addEventListener('click', togglePause);
+</script>
 </body>
 </html>
