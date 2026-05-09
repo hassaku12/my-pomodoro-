@@ -6,46 +6,73 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Asakatsu Focus</title>
-    
-    <!-- 【アイコン追加】 -->
     <link rel="icon" href="tomato-icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="tomato-icon.jpg">
-
     <style>
-        :root { --bg: #1a1a1a; --card: #2d2d2d; --text: #ffffff; --accent: #ff5f5f; }
+        :root { --bg: #1a1a1a; --card: #2d2d2d; --text: #ffffff; --accent: #ff5f5f; --secondary: #444; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .container { width: 85%; max-width: 400px; background: var(--card); padding: 30px; border-radius: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .timer { font-size: 5.5rem; font-weight: 200; margin: 10px 0; font-variant-numeric: tabular-nums; }
-        .status { color: #888; letter-spacing: 3px; font-size: 0.9rem; text-transform: uppercase; }
-        select, button { width: 100%; padding: 16px; border-radius: 15px; border: none; font-size: 1.1rem; margin-top: 15px; }
-        select { background: #444; color: white; text-align: center; -webkit-appearance: none; }
-        button { background: var(--accent); color: white; font-weight: bold; cursor: pointer; }
-        label { font-size: 0.75rem; color: #666; display: block; text-align: left; margin: 15px 0 -10px 5px; }
+        .container { width: 90%; max-width: 400px; background: var(--card); padding: 25px; border-radius: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-height: 90vh; overflow-y: auto; }
+        .timer { font-size: 5rem; font-weight: 200; margin: 5px 0; font-variant-numeric: tabular-nums; }
+        .status { color: #888; letter-spacing: 3px; font-size: 0.8rem; text-transform: uppercase; }
+        
+        /* 入力セクションのスタイル */
+        .log-section { margin-top: 20px; border-top: 1px solid #444; padding-top: 20px; }
+        .tab-menu { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 8px; font-size: 0.8rem; background: var(--secondary); border-radius: 10px; color: #aaa; cursor: pointer; border: none; }
+        .tab-btn.active { background: var(--accent); color: white; }
+        
+        .chip-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
+        .chip { padding: 8px 12px; background: #3d3d3d; border-radius: 20px; font-size: 0.85rem; cursor: pointer; border: 1px solid transparent; }
+        .chip.selected { border-color: var(--accent); color: var(--accent); background: #3d2d2d; }
+        
+        textarea { width: 90%; padding: 12px; border-radius: 12px; background: #1a1a1a; color: white; border: 1px solid #444; margin-bottom: 10px; font-size: 1rem; resize: none; }
+        .send-btn { background: #4a90e2; color: white; padding: 12px; width: 100%; border-radius: 12px; font-weight: bold; border: none; }
+        
+        select, .action-btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 1rem; margin-top: 10px; cursor: pointer; }
+        select { background: var(--secondary); color: white; text-align: center; }
+        .action-btn { background: var(--accent); color: white; font-weight: bold; }
+        label { font-size: 0.7rem; color: #666; display: block; text-align: left; margin: 10px 0 -5px 5px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="setup-screen">
-        <h2 style="font-weight: 300;">Focus Timer</h2>
-        <label>ポモドーロ</label>
-        <select id="timerMode">
-            <option value="25">25分 - 5分</option>
-            <option value="50">50分 - 10分</option>
-        </select>
-        <label>ログ内容</label>
-        <select id="activity">
-            <option value="勉強">勉強 ✍️</option>
-            <option value="読書">読書 📖</option>
-            <option value="仕事">仕事 💻</option>
-        </select>
-        <button id="startBtn">集中スタート</button>
+    <div id="timer-ui">
+        <div id="setup-screen">
+            <h3 style="font-weight: 300; margin: 0;">Focus Timer</h3>
+            <label>ポモドーロ</label>
+            <select id="timerMode">
+                <option value="25">25分 - 5分</option>
+                <option value="50">50分 - 10分</option>
+            </select>
+            <label>ログ内容</label>
+            <select id="activity">
+                <option value="勉強">勉強 ✍️</option>
+                <option value="読書">読書 📖</option>
+                <option value="仕事">仕事 💻</option>
+            </select>
+            <button id="startBtn" class="action-btn">集中スタート</button>
+        </div>
+        <div id="timer-screen" style="display:none;">
+            <div id="status" class="status">FOCUS</div>
+            <div class="timer" id="display">00:00</div>
+            <button id="stopBtn" class="action-btn" style="background:#444;">一時停止</button>
+        </div>
     </div>
 
-    <div id="timer-screen" style="display:none;">
-        <div id="status" class="status">FOCUS</div>
-        <div class="timer" id="display">00:00</div>
-        <button id="stopBtn" style="background:#444;">一時停止</button>
+    <div class="log-section">
+        <div class="tab-menu">
+            <button class="tab-btn active" onclick="switchTab('diary')">Daily</button>
+            <button class="tab-btn" onclick="switchTab('book')">Book</button>
+            <button class="tab-btn" onclick="switchTab('task')">Do</button>
+            <button class="tab-btn" onclick="switchTab('wish')">Wish</button>
+        </div>
+
+        <div id="emotion-chips" class="chip-group">
+            </div>
+
+        <textarea id="logMemo" placeholder="一言メモを入力..." rows="2"></textarea>
+        <button id="send-log-btn" class="send-btn" onclick="sendQuickLog()">Thinoへ送信</button>
     </div>
 </div>
 
@@ -53,30 +80,84 @@
 <audio id="relaxSound" src="In That Mood.mp3" preload="auto"></audio>
 
 <script>
-    let timer;
-    let timeLeft;
-    let isFocus = true;
-    let isPaused = false;
-    let wakeLock = null;
+    let timer, timeLeft, isFocus = true, isPaused = false, wakeLock = null;
+    let currentTab = 'diary';
+    let selectedEmotion = "";
 
+    const emotions = {
+        diary: ["満足 😊", "普通 😐", "悔しい 😫", "疲れ 🔋"],
+        book: ["わくわく 🤩", "癒し 🌿", "知的刺激 💡", "納得 🤝"],
+        task: ["週末 🗓️", "買い物 🛒", "日常 🧼"],
+        wish: ["今年 🌟", "リスト 📝"]
+    };
+
+    const tags = {
+        diary: "log/diary", book: "log/book",
+        task: { "週末 🗓️": "do/weekend", "買い物 🛒": "do/buy", "日常 🧼": "do/task" },
+        wish: { "今年 🌟": "wish/yearly", "リスト 📝": "wish/list" }
+    };
+
+    function switchTab(tab) {
+        currentTab = tab;
+        selectedEmotion = "";
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(tab)));
+        renderChips();
+    }
+
+    function renderChips() {
+        const group = document.getElementById('emotion-chips');
+        group.innerHTML = "";
+        emotions[currentTab].forEach(e => {
+            const span = document.createElement('span');
+            span.className = 'chip';
+            span.innerText = e;
+            span.onclick = () => {
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+                span.classList.add('selected');
+                selectedEmotion = e;
+            };
+            group.appendChild(span);
+        });
+    }
+
+    function sendQuickLog() {
+        const memo = document.getElementById('logMemo').value;
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        let tag = (typeof tags[currentTab] === 'string') ? tags[currentTab] : tags[currentTab][selectedEmotion];
+        if(!tag) tag = (currentTab === 'task') ? "do/task" : "wish/list";
+
+        let content = "";
+        if (currentTab === 'task' || currentTab === 'wish') {
+            // チェックリスト形式
+            content = `\n\n- [ ] ${selectedEmotion ? '['+selectedEmotion+'] ' : ''}${memo} #${tag}\n`;
+        } else {
+            // ログ形式
+            content = `\n\n- ${timeStr} ${selectedEmotion ? '['+selectedEmotion+'] ' : ''}${memo} #${tag}\n`;
+        }
+
+        const uri = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(content)}&mode=append`;
+        window.location.href = uri;
+        
+        // 送信後にクリア
+        document.getElementById('logMemo').value = "";
+        selectedEmotion = "";
+        renderChips();
+    }
+
+    // --- タイマー処理 (既存のUI復元版) ---
     const focusAudio = document.getElementById('focusSound');
     const relaxAudio = document.getElementById('relaxSound');
     const stopBtn = document.getElementById('stopBtn');
 
-    // --- 1. シームレスループ (10秒前で戻す：途切れ対策強化) ---
     [focusAudio, relaxAudio].forEach(audio => {
         audio.addEventListener('timeupdate', function() {
-            const buffer = 10.0; 
-            if(this.currentTime > this.duration - buffer){
-                this.currentTime = 0;
-                this.play();
-            }
+            if(this.currentTime > this.duration - 10.0){ this.currentTime = 0; this.play(); }
         });
     });
 
-    async function requestWakeLock() {
-        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
-    }
+    async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
 
     function startTimer() {
         timeLeft = parseInt(document.getElementById('timerMode').value) * 60;
@@ -88,13 +169,8 @@
     }
 
     function runPhase() {
-        if (isFocus) {
-            document.getElementById('status').textContent = "FOCUS";
-            focusAudio.play(); relaxAudio.pause();
-        } else {
-            document.getElementById('status').textContent = "RELAX";
-            relaxAudio.play(); focusAudio.pause();
-        }
+        if (isFocus) { document.getElementById('status').textContent = "FOCUS"; focusAudio.play(); relaxAudio.pause(); }
+        else { document.getElementById('status').textContent = "RELAX"; relaxAudio.play(); focusAudio.pause(); }
         startInterval();
     }
 
@@ -103,35 +179,24 @@
         timer = setInterval(() => {
             if (!isPaused) {
                 timeLeft--;
-                const m = Math.floor(timeLeft / 60);
-                const s = timeLeft % 60;
+                const m = Math.floor(timeLeft / 60); const s = timeLeft % 60;
                 document.getElementById('display').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                
                 if (timeLeft <= 0) {
                     clearInterval(timer);
-                    if (isFocus) {
-                        logToObsidian(); 
-                        isFocus = false;
-                        timeLeft = (document.getElementById('timerMode').value === "25") ? 5 * 60 : 10 * 60;
-                        setTimeout(runPhase, 2000); 
-                    } else { resetApp(); }
+                    if (isFocus) { logFocus(); isFocus = false; timeLeft = (document.getElementById('timerMode').value === "25") ? 5 * 60 : 10 * 60; setTimeout(runPhase, 2000); }
+                    else { resetApp(); }
                 }
             }
         }, 1000);
     }
 
-    // --- 2. Thino連携 (空行ブースト) ---
-    function logToObsidian() {
+    function logFocus() {
         const act = document.getElementById('activity').value;
         const mode = document.getElementById('timerMode').value;
         const now = new Date();
         const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        
-        // 改行を入れることで、Thinoに確実に「ログ」として認識させます
-        const note = `\n- ${timeStr} 🍅${act} (${mode}分間集中) #log/focus\n`;
-        
-        const uri = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(note)}&mode=append`;
-        window.location.href = uri;
+        const note = `\n\n- ${timeStr} 🍅${act} (${mode}分間集中) #log/focus\n`;
+        window.location.href = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(note)}&mode=append`;
     }
 
     function togglePause() {
@@ -142,8 +207,7 @@
     }
 
     function resetApp() {
-        clearInterval(timer);
-        if (wakeLock) wakeLock.release();
+        clearInterval(timer); if (wakeLock) wakeLock.release();
         focusAudio.pause(); relaxAudio.pause();
         document.getElementById('setup-screen').style.display = 'block';
         document.getElementById('timer-screen').style.display = 'none';
@@ -151,6 +215,9 @@
 
     document.getElementById('startBtn').addEventListener('click', startTimer);
     stopBtn.addEventListener('click', togglePause);
+    
+    // 初期化
+    switchTab('diary');
 </script>
 </body>
 </html>
