@@ -17,7 +17,6 @@
         .timer { font-size: 5rem; font-weight: 200; margin: 5px 0; font-variant-numeric: tabular-nums; }
         .status { color: #888; letter-spacing: 3px; font-size: 0.8rem; text-transform: uppercase; }
         
-        /* 記録セクション */
         .log-section { margin-top: 20px; border-top: 1px solid #444; padding-top: 20px; }
         .tab-menu { display: flex; gap: 5px; margin-bottom: 15px; }
         .tab-btn { flex: 1; padding: 8px; font-size: 0.75rem; background: var(--secondary); border-radius: 10px; color: #aaa; cursor: pointer; border: none; outline: none; }
@@ -51,7 +50,6 @@
             <select id="activity">
                 <option value="勉強">勉強 ✍️</option>
                 <option value="読書">読書 📖</option>
-                <option value="仕事">仕事 💻</option>
             </select>
             <button id="startBtn" class="action-btn">集中スタート</button>
         </div>
@@ -69,16 +67,14 @@
             <button class="tab-btn" id="tab-task" onclick="switchTab('task')">Do</button>
             <button class="tab-btn" id="tab-wish" onclick="switchTab('wish')">Wish</button>
         </div>
-
         <div id="emotion-chips" class="chip-group"></div>
-
         <textarea id="logMemo" placeholder="一言メモを入力..." rows="2"></textarea>
         <button id="send-log-btn" class="send-btn" onclick="sendQuickLog()">Thinoへ送信</button>
     </div>
 </div>
 
-<audio id="focusSound" src="雨が降る2.mp3" preload="auto"></audio>
-<audio id="relaxSound" src="In That Mood.mp3" preload="auto"></audio>
+<audio id="focusSound" src="雨が降る2.mp3" preload="auto" loop></audio>
+<audio id="relaxSound" src="In That Mood.mp3" preload="auto" loop></audio>
 
 <script>
     let timer, timeLeft, isFocus = true, isPaused = false, wakeLock = null;
@@ -138,9 +134,9 @@
         const emotionPart = selectedEmotion ? `[${selectedEmotion}] ` : '';
         
         if (currentTab === 'task' || currentTab === 'wish') {
-            content = `\n\n- [ ] ${emotionPart}${memo} #${tag}\n`;
+            content = `\n- [ ] ${emotionPart}${memo} #${tag}`;
         } else {
-            content = `\n\n- ${timeStr} ${emotionPart}${memo} #${tag}\n`;
+            content = `\n- ${timeStr} ${emotionPart}${memo} #${tag}`;
         }
 
         const uri = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(content)}&mode=append`;
@@ -151,17 +147,10 @@
         renderChips();
     }
 
-    // --- タイマー制御 ---
     const focusAudio = document.getElementById('focusSound');
     const relaxAudio = document.getElementById('relaxSound');
     const stopBtn = document.getElementById('stopBtn');
     const logArea = document.getElementById('log-area');
-
-    [focusAudio, relaxAudio].forEach(audio => {
-        audio.addEventListener('timeupdate', function() {
-            if(this.currentTime > this.duration - 10.0){ this.currentTime = 0; this.play(); }
-        });
-    });
 
     async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
 
@@ -170,14 +159,22 @@
         isFocus = true; isPaused = false;
         document.getElementById('setup-screen').style.display = 'none';
         document.getElementById('timer-screen').style.display = 'block';
-        logArea.style.display = 'none'; // 集中開始で記録エリアを隠す
+        logArea.style.display = 'none';
         requestWakeLock();
+        focusAudio.play().catch(() => {});
         runPhase();
     }
 
     function runPhase() {
-        if (isFocus) { document.getElementById('status').textContent = "FOCUS"; focusAudio.play(); relaxAudio.pause(); }
-        else { document.getElementById('status').textContent = "RELAX"; relaxAudio.play(); focusAudio.pause(); }
+        focusAudio.pause();
+        relaxAudio.pause();
+        if (isFocus) {
+            document.getElementById('status').textContent = "FOCUS";
+            focusAudio.play().catch(() => {});
+        } else {
+            document.getElementById('status').textContent = "RELAX";
+            relaxAudio.play().catch(() => {});
+        }
         startInterval();
     }
 
@@ -190,7 +187,7 @@
                 document.getElementById('display').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                 if (timeLeft <= 0) {
                     clearInterval(timer);
-                    if (isFocus) { logFocus(); isFocus = false; timeLeft = (document.getElementById('timerMode').value === "25") ? 5 * 60 : 10 * 60; setTimeout(runPhase, 2000); }
+                    if (isFocus) { logFocus(); }
                     else { resetApp(); }
                 }
             }
@@ -202,8 +199,14 @@
         const mode = document.getElementById('timerMode').value;
         const now = new Date();
         const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        const note = `\n\n- ${timeStr} 🍅${act} (${mode}分間集中) #log/focus\n`;
+        const note = `\n- ${timeStr} 🍅${act} (${mode}分間集中) #log/focus`;
+        
+        relaxAudio.load();
         window.location.href = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(note)}&mode=append`;
+
+        isFocus = false;
+        timeLeft = (document.getElementById('timerMode').value === "25") ? 5 * 60 : 10 * 60;
+        setTimeout(runPhase, 2000);
     }
 
     function togglePause() {
@@ -218,13 +221,11 @@
         focusAudio.pause(); relaxAudio.pause();
         document.getElementById('setup-screen').style.display = 'block';
         document.getElementById('timer-screen').style.display = 'none';
-        logArea.style.display = 'block'; // 終了で記録エリアを表示
+        logArea.style.display = 'block';
     }
 
     document.getElementById('startBtn').addEventListener('click', startTimer);
     stopBtn.addEventListener('click', togglePause);
-    
-    // 初期表示設定
     switchTab('diary');
 </script>
 </body>
