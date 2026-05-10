@@ -152,6 +152,17 @@
     const stopBtn = document.getElementById('stopBtn');
     const logArea = document.getElementById('log-area');
 
+    // シームレスループ処理
+    [focusAudio, relaxAudio].forEach(audio => {
+        audio.addEventListener('timeupdate', function() {
+            const buffer = 0.3;
+            if (this.currentTime > this.duration - buffer) {
+                this.currentTime = 0;
+                this.play().catch(() => {});
+            }
+        });
+    });
+
     async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
 
     function startTimer() {
@@ -161,6 +172,8 @@
         document.getElementById('timer-screen').style.display = 'block';
         logArea.style.display = 'none';
         requestWakeLock();
+        
+        focusAudio.currentTime = 0;
         focusAudio.play().catch(() => {});
         runPhase();
     }
