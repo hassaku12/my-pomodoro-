@@ -33,6 +33,7 @@
         select { background: var(--secondary); color: white; text-align: center; -webkit-appearance: none; }
         .action-btn { background: var(--accent); color: white; font-weight: bold; }
         label { font-size: 0.7rem; color: #666; display: block; text-align: left; margin: 10px 0 -5px 5px; text-transform: uppercase; }
+        .setting-link { font-size: 0.6rem; color: #444; margin-top: 15px; cursor: pointer; display: inline-block; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -70,6 +71,7 @@
         <div id="emotion-chips" class="chip-group"></div>
         <textarea id="logMemo" placeholder="一言メモを入力..." rows="2"></textarea>
         <button id="send-log-btn" class="send-btn" onclick="sendQuickLog()">Thinoへ送信</button>
+        <div class="setting-link" onclick="setGasUrl()">連携URL設定</div>
     </div>
 </div>
 
@@ -152,7 +154,6 @@
     const stopBtn = document.getElementById('stopBtn');
     const logArea = document.getElementById('log-area');
 
-    // シームレスループ処理
     [focusAudio, relaxAudio].forEach(audio => {
         audio.addEventListener('timeupdate', function() {
             const buffer = 0.3;
@@ -210,16 +211,29 @@
     function logFocus() {
         const act = document.getElementById('activity').value;
         const mode = document.getElementById('timerMode').value;
-        const now = new Date();
-        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        const note = `\n- ${timeStr} 🍅${act} (${mode}分間集中) #log/focus`;
+        const gasUrl = localStorage.getItem('LOGLOG_GAS_URL');
         
-        relaxAudio.load();
-        window.location.href = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(note)}&mode=append`;
+        // Googleカレンダーへ送信
+        if (gasUrl) {
+            const title = `🍅${act}`;
+            const fetchUrl = `${gasUrl}?title=${encodeURIComponent(title)}&minutes=${mode}`;
+            fetch(fetchUrl, { mode: 'no-cors' }).catch(e => console.error("GAS error:", e));
+        }
 
+        // 休憩フェーズへ移行（Obsidianは開かない）
+        relaxAudio.load();
         isFocus = false;
-        timeLeft = (document.getElementById('timerMode').value === "25") ? 5 * 60 : 10 * 60;
+        timeLeft = (mode === "25") ? 5 * 60 : 10 * 60;
         setTimeout(runPhase, 2000);
+    }
+
+    function setGasUrl() {
+        const current = localStorage.getItem('LOGLOG_GAS_URL') || "";
+        const url = prompt("GASのウェブアプリURLを入力してください:", current);
+        if (url !== null) {
+            localStorage.setItem('LOGLOG_GAS_URL', url);
+            alert("設定を保存しました。");
+        }
     }
 
     function togglePause() {
