@@ -156,7 +156,7 @@
 
     [focusAudio, relaxAudio].forEach(audio => {
         audio.addEventListener('timeupdate', function() {
-            const buffer = 0.3;
+            const buffer = 0.8;
             if (this.currentTime > this.duration - buffer) {
                 this.currentTime = 0;
                 this.play().catch(() => {});
