@@ -70,7 +70,7 @@
         </div>
         <div id="emotion-chips" class="chip-group"></div>
         <textarea id="logMemo" placeholder="一言メモを入力..." rows="2"></textarea>
-        <button id="send-log-btn" class="send-btn" onclick="sendQuickLog()">Thinoへ送信</button>
+        <button id="send-log-btn" class="send-btn" onclick="sendQuickLog()">送信</button>
         <div class="setting-link" onclick="setGasUrl()">連携URL設定</div>
     </div>
 </div>
@@ -123,27 +123,26 @@
 
     function sendQuickLog() {
         const memo = document.getElementById('logMemo').value;
+        if (!memo) return;
+
         const now = new Date();
         const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        
+
         let tag = (typeof tags[currentTab] === 'string') ? tags[currentTab] : tags[currentTab][selectedEmotion];
-        if(!tag) {
+        if (!tag) {
             const defaults = { diary: "log/diary", book: "log/book", task: "do/task", wish: "wish/list" };
             tag = defaults[currentTab];
         }
 
-        let content = "";
-        const emotionPart = selectedEmotion ? `[${selectedEmotion}] ` : '';
-        
-        if (currentTab === 'task' || currentTab === 'wish') {
-            content = `\n- [ ] ${emotionPart}${memo} #${tag}`;
+        const gasUrl = localStorage.getItem('LOGLOG_GAS_URL');
+        if (gasUrl) {
+            const fetchUrl = `${gasUrl}?type=log&tab=${encodeURIComponent(currentTab)}&tag=${encodeURIComponent(tag)}&memo=${encodeURIComponent(memo)}&emotion=${encodeURIComponent(selectedEmotion)}&time=${encodeURIComponent(timeStr)}`;
+            fetch(fetchUrl, { mode: 'no-cors' }).catch(e => console.error("GAS log error:", e));
         } else {
-            content = `\n- ${timeStr} ${emotionPart}${memo} #${tag}`;
+            alert("先に「連携URL設定」からGAS URLを設定してください。");
+            return;
         }
 
-        const uri = `obsidian://advanced-uri?daily=true&data=${encodeURIComponent(content)}&mode=append`;
-        window.location.href = uri;
-        
         document.getElementById('logMemo').value = "";
         selectedEmotion = "";
         renderChips();
