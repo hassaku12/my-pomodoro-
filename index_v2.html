@@ -78,20 +78,14 @@
 
 <script>
     let timer, timeLeft, isFocus = true, isPaused = false, wakeLock = null;
-    let currentTab = 'diary';
+    let currentTab = 'done';
     let selectedEmotion = "";
 
-    const emotions = {
-        diary: ["満足 😊", "普通 😐", "悔しい 😫", "疲れ 🔋"],
-        book: ["わくわく 🤩", "癒し 🌿", "知的刺激 💡", "納得 🤝"],
-        task: ["週末 🗓️", "買い物 🛒", "日常 🧼"],
-        wish: ["今年 🌟", "リスト 📝"]
-    };
-
-    const tags = {
-        diary: "log/diary", book: "log/book",
-        task: { "週末 🗓️": "do/weekend", "買い物 🛒": "do/buy", "日常 🧼": "do/task" },
-        wish: { "今年 🌟": "wish/yearly", "リスト 📝": "wish/list" }
+    const periods = {
+        "今週",
+        "今月",
+        "今年",
+        "いつか"
     };
 
     function switchTab(tab) {
@@ -119,33 +113,37 @@
         });
     }
 
-    function sendQuickLog() {
-        const memo = document.getElementById('logMemo').value;
-        if (!memo) return;
+   function sendQuickLog() {
+       const memo = document.getElementById('logMemo').value.trim();
+       if (!memo) return;
 
-        const now = new Date();
-        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        let tag = (typeof tags[currentTab] === 'string') ? tags[currentTab] : tags[currentTab][selectedEmotion];
-        if (!tag) {
-            const defaults = { diary: "log/diary", book: "log/book", task: "do/task", wish: "wish/list" };
-            tag = defaults[currentTab];
-        }
-
-        const gasUrl = localStorage.getItem('LOGLOG_GAS_URL');
-        if (gasUrl) {
-            const fetchUrl = `${gasUrl}?type=log&tab=${encodeURIComponent(currentTab)}&tag=${encodeURIComponent(tag)}&memo=${encodeURIComponent(memo)}&emotion=${encodeURIComponent(selectedEmotion)}&time=${encodeURIComponent(timeStr)}`;
-            fetch(fetchUrl, { mode: 'no-cors' }).catch(e => console.error("GAS log error:", e));
-        } else {
-            alert("先に「連携URL設定」からGAS URLを設定してください。");
-            return;
-        }
-
-        document.getElementById('logMemo').value = "";
-        selectedEmotion = "";
-        renderChips();
-    }
-
+       const period = currentTab === 'future' ? selectedPeriod : "";
+       const gasUrl = localStorage.getItem('LOGLOG_GAS_URL');
+       
+       if (gasUrl) {
+           const now = new Date();
+           const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+           
+           const fetchUrl =
+               `${gasUrl}?type=${encodeURIComponent(currentTab)}` +
+               `&period=${encodeURIComponent(period)}` +
+               `&memo=${encodeURIComponent(memo)}` +
+               `&time=${encodeURIComponent(timeStr)}`;
+           fetch(fetchUrl, { mode: 'no-cors' })
+               .catch(e => console.error("GAS log error:", e));
+       } else {
+           alert("先に「連携URL設定」からGAS URLを設定してください。");
+           return;
+       }
+       
+       document.getElementById('logMemo').value = "";
+       
+       if (currentTab === 'future') {
+           selectedPeriod = "";
+           renderChips();
+       }
+   }
+    
     const focusAudio = document.getElementById('focusSound');
     const relaxAudio = document.getElementById('relaxSound');
     const stopBtn = document.getElementById('stopBtn');
