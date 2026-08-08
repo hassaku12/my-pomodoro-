@@ -96,22 +96,35 @@
         renderChips();
     }
 
-    function renderChips() {
-        const group = document.getElementById('emotion-chips');
-        group.innerHTML = "";
-        emotions[currentTab].forEach(e => {
-            const span = document.createElement('span');
-            span.className = 'chip';
-            if (selectedEmotion === e) span.classList.add('selected');
-            span.innerText = e;
-            span.onclick = () => {
-                document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
-                span.classList.add('selected');
-                selectedEmotion = e;
-            };
-            group.appendChild(span);
-        });
-    }
+   function renderChips() {
+       const group = document.getElementById('emotion-chips');
+       group.innerHTML = "";
+       
+       if (currentTab !== 'future') {
+           return;
+       }
+       periods.forEach(period => {
+           const span = document.createElement('span');
+           span.className = 'chip';
+           
+           if (selectedPeriod === period) {
+               span.classList.add('selected');
+           }
+           
+           span.innerText = period;
+           
+           span.onclick = () => {
+               document.querySelectorAll('.chip').forEach(c => {
+                   c.classList.remove('selected');
+               });
+               
+               span.classList.add('selected');
+               selectedPeriod = period;
+           };
+           
+           group.appendChild(span);
+       });
+   }
 
    function sendQuickLog() {
        const memo = document.getElementById('logMemo').value.trim();
