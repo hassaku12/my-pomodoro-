@@ -79,20 +79,22 @@
 <script>
     let timer, timeLeft, isFocus = true, isPaused = false, wakeLock = null;
     let currentTab = 'done';
-    let selectedEmotion = "";
+    let selectedPeriod = "";
 
-    const periods = {
+    const periods = [
         "今週",
         "今月",
         "今年",
         "いつか"
-    };
+    ];
 
     function switchTab(tab) {
         currentTab = tab;
-        selectedEmotion = "";
+        selectedPeriod = "";
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('tab-' + tab).classList.add('active');
+        document.getElementById('logMemo').placeholder =
+            currentTab === 'done' ? '何をした？' : '何をしたい？';
         renderChips();
     }
 
@@ -129,6 +131,11 @@
    function sendQuickLog() {
        const memo = document.getElementById('logMemo').value.trim();
        if (!memo) return;
+
+       if (currentTab === 'future' && !selectedPeriod) {
+           alert("期間を選択してください。");
+           return;
+       }
 
        const period = currentTab === 'future' ? selectedPeriod : "";
        const gasUrl = localStorage.getItem('LOGLOG_GAS_URL');
