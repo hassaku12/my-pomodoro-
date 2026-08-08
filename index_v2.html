@@ -63,10 +63,8 @@
 
     <div id="log-area" class="log-section">
         <div class="tab-menu">
-            <button class="tab-btn active" id="tab-diary" onclick="switchTab('diary')">Daily</button>
-            <button class="tab-btn" id="tab-book" onclick="switchTab('book')">Book</button>
-            <button class="tab-btn" id="tab-task" onclick="switchTab('task')">Do</button>
-            <button class="tab-btn" id="tab-wish" onclick="switchTab('wish')">Wish</button>
+            <button class="tab-btn active" id="tab-done" onclick="switchTab('done')">Done</button>
+            <button class="tab-btn" id="tab-future" onclick="switchTab('future')">Future</button>
         </div>
         <div id="emotion-chips" class="chip-group"></div>
         <textarea id="logMemo" placeholder="一言メモを入力..." rows="2"></textarea>
@@ -252,7 +250,7 @@
 
     document.getElementById('startBtn').addEventListener('click', startTimer);
     stopBtn.addEventListener('click', togglePause);
-    switchTab('diary');
+    switchTab('done');
 </script>
 </body>
 </html>
